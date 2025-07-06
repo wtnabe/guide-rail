@@ -1,0 +1,11 @@
+module GuideRail
+  VERSION: String
+  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  def class_name: (klass: String | Symbol) -> String | Symbol
+  def schema: (schema: Dry::Schema::Params) -> Dry::Schema::Params
+  def renderable: (bool: bool) -> bool
+  def yield_block: { } -> void
+  def create_class!: () -> Data
+  def from: (data: Hash) -> Data | Dry::Schema::Result | Dry::Monads::Result<Data | Dry::Schema::Result>
+end

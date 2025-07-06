@@ -1,0 +1,16 @@
+*~
+*.bak
+
+.DS_Store
+Thumbs.db
+
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+/vendor/
+Gemfile.lock
