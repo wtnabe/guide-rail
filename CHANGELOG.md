@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.2.0] - 2026-11-21
 
 - **Breaking**: values of the generated Data object come from the schema result ( `Dry::Schema::Result#to_h` ) instead of the input
   - with `Dry::Schema.Params`, coerced values are set ( e.g. `"20"` -> `20`, `"off"` -> `false`, `""` -> `nil` for `maybe` )
