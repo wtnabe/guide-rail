@@ -43,7 +43,7 @@ $ bundle add guide-rail
 ```ruby
 require "guide-rail"
 
-SimpleNonNullableSchema = Dry::Schema.Params do
+SimpleNonNullableSchema = Dry::Schema.define do
   required(:name).filled(:string)
 end
 
@@ -54,7 +54,7 @@ class SimpleNonNullableCreator
   class_name :SimpleNonNullable
 end
 
-SimpleNonNullableCreator.from(name: nil) # => #<Dry::Schema::Result{name: nil} errors={name: ["must be filled"]} path=[]>
+SimpleNonNullableCreator.from(name: nil) # => #<Dry::Schema::Result{name: nil} errors={name: ["must be a string"]} path=[]>
 SimpleNonNullableCreator.from(name: "John") # => #<data SimpleNonNullable name="John">
 SimpleNonNullableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["is missing"]} path=[]>
 ```
@@ -62,7 +62,7 @@ SimpleNonNullableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["i
 ### Nullable Object with `renderable` option
 
 ```ruby
-SimpleNullableSchema = Dry::Schema.Params do
+SimpleNullableSchema = Dry::Schema.define do
   required(:name).maybe(:string)
 end
 
@@ -86,7 +86,7 @@ You can give a block to Creator class, the generated Data class can be extended 
 This can be used to define decorator methods and conversion processes, so the generated Data class can also be used as a so-called ViewModel.
 
 ```ruby
-OptionalSchema = Dry::Schema.Params do
+OptionalSchema = Dry::Schema.define do
   optional(:name).filled(:string)
 end
 
@@ -108,10 +108,35 @@ end
 OptionalAndYieldAccepter.from({}).name.start_with? "decorated" # => true
 ```
 
+### Choosing a schema
+
+Values of the generated Data object come from the schema result, not from the input as is. So the Data object has the values the schema validated.
+
+Use `Dry::Schema.define` for typed data such as hand-made Hashes or ActiveModel. Values are not coerced, and the Data object has the input values as is.
+
+Use `Dry::Schema.Params` for HTTP params. String keys are accepted, and values are coerced before validation.
+
+```ruby
+AgeSchema = Dry::Schema.Params do
+  required(:age).filled(:integer)
+end
+
+class AgeCreator
+  extend GuideRail
+
+  schema AgeSchema
+  class_name :Age
+end
+
+AgeCreator.from("age" => "20") # => #<data Age age=20>
+```
+
+In both cases, keys not in the schema are dropped, including those in nested Hashes.
+
 ### Monadic mode
 
 ```ruby
-SimpleNonNullableSchema = Dry::Schema.Params do
+SimpleNonNullableSchema = Dry::Schema.define do
   required(:name).filled(:string)
 end
 

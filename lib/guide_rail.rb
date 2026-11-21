@@ -67,12 +67,14 @@ module GuideRail
     Object.const_get @_class
 
     if result.success?
+      # values come from schema result ( coerced and filtered by schema ), not from input
+      values = result.to_h
       new_value = Object.const_get(@_class).new(
         *(
           if @_renderable
-            to_renderable(acceptance)
+            to_renderable(values)
           else
-            acceptance
+            values
           end
         ).values_at(*@_attrs).map(&:freeze)
       )
@@ -122,7 +124,7 @@ module GuideRail
       case e
       when Hash
         [e.keys.first.to_sym, renderable_default(e.values.first)]
-      when String
+      when String, Symbol # Params dumps String keys, define dumps Symbol keys
         [e.to_sym, ""]
       end
     }.flatten]
