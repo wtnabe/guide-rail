@@ -43,7 +43,7 @@ $ bundle add guide-rail
 ```ruby
 require "guide-rail"
 
-SimpleNonNullableSchema = Dry::Schema.Params do
+SimpleNonNullableSchema = Dry::Schema.define do
   required(:name).filled(:string)
 end
 
@@ -54,7 +54,7 @@ class SimpleNonNullableCreator
   class_name :SimpleNonNullable
 end
 
-SimpleNonNullableCreator.from(name: nil) # => #<Dry::Schema::Result{name: nil} errors={name: ["must be filled"]} path=[]>
+SimpleNonNullableCreator.from(name: nil) # => #<Dry::Schema::Result{name: nil} errors={name: ["must be a string"]} path=[]>
 SimpleNonNullableCreator.from(name: "John") # => #<data SimpleNonNullable name="John">
 SimpleNonNullableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["is missing"]} path=[]>
 ```
@@ -62,7 +62,7 @@ SimpleNonNullableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["i
 ### Nullable Object with `renderable` option
 
 ```ruby
-SimpleNullableSchema = Dry::Schema.Params do
+SimpleNullableSchema = Dry::Schema.define do
   required(:name).maybe(:string)
 end
 
@@ -86,7 +86,7 @@ You can give a block to Creator class, the generated Data class can be extended 
 This can be used to define decorator methods and conversion processes, so the generated Data class can also be used as a so-called ViewModel.
 
 ```ruby
-OptionalSchema = Dry::Schema.Params do
+OptionalSchema = Dry::Schema.define do
   optional(:name).filled(:string)
 end
 
@@ -111,7 +111,7 @@ OptionalAndYieldAccepter.from({}).name.start_with? "decorated" # => true
 ### Monadic mode
 
 ```ruby
-SimpleNonNullableSchema = Dry::Schema.Params do
+SimpleNonNullableSchema = Dry::Schema.define do
   required(:name).filled(:string)
 end
 
