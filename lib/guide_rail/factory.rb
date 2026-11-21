@@ -39,13 +39,24 @@ class GuideRail::Factory
   end
 
   #
+  # @param [Symbol] name
+  # @param [Proc] block
+  #
+  def computed(name, &block)
+    raise ArgumentError, "computed :#{name} requires a block" unless block
+
+    (@_computeds ||= {})[name.to_sym] = block
+  end
+
+  #
   # @return [Data]
   #
   def create_class!
     Object.const_get @_class
   rescue NameError
     @_attrs = @_schema.key_map.to_a.map { |k| k.name.to_sym }
-    klass = Data.define(*@_attrs, &@_block)
+    @_input_class = Data.define(*@_attrs)
+    klass = Data.define(*all_member_names, &@_block)
     Object.const_set(@_class, klass)
     klass
   end
@@ -61,21 +72,45 @@ class GuideRail::Factory
     Object.const_get @_class
 
     if result.success?
-      values = result.to_h
-      new_value = Object.const_get(@_class).new(
-        *(
-          if @_renderable
-            to_renderable(values)
-          else
-            values
-          end
-        ).values_at(*@_attrs).map(&:freeze)
-      )
+      schema_values = result.to_h
+      values = @_attrs.to_h { |k| [k, schema_values[k].freeze] }
+      values.merge!(compute(values))
+      values = to_renderable(values, renderable_default.merge(computed_renderable_default)) if @_renderable
+
+      new_value = Object.const_get(@_class).new(*values.values_at(*all_member_names).map(&:freeze))
 
       @_monadic ? Success(new_value) : new_value
     else
       @_monadic ? result.to_monad : result
     end
+  end
+
+  #
+  # @return [Array<Symbol>]
+  #
+  def all_member_names
+    (@_attrs + (@_computeds || {}).keys).uniq
+  end
+
+  #
+  # acc is a Data of validated input as is ( before renderable ), so it has
+  # no writers and results of other computeds are not visible.
+  #
+  # @param [Hash] values
+  # @return [Hash]
+  #
+  def compute(values)
+    return {} unless @_computeds
+
+    acc = @_input_class.new(**values)
+    @_computeds.transform_values { |block| block.call(acc).freeze }
+  end
+
+  #
+  # @return [Hash]
+  #
+  def computed_renderable_default
+    (@_computeds || {}).keys.to_h { |k| [k, ""] }
   end
 
   #
