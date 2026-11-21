@@ -122,7 +122,7 @@ module GuideRail
       case e
       when Hash
         [e.keys.first.to_sym, renderable_default(e.values.first)]
-      when String
+      when String, Symbol # Params dumps String keys, define dumps Symbol keys
         [e.to_sym, ""]
       end
     }.flatten]

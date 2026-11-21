@@ -159,6 +159,14 @@ describe GuideRail do
           end
         end
       end
+
+      describe "StrictRenderable ( define )" do
+        it {
+          renderable = StrictRenderableCreator.from(age: 20, name: nil, location: {lat: 35.6})
+
+          assert { renderable.name == "" }
+        }
+      end
     end
   end
 
@@ -197,6 +205,20 @@ describe GuideRail do
             location: {
               lat: "",
               lon: ""
+            }
+          }
+        }
+      }
+    end
+
+    describe "define ( Symbol keys )" do
+      it {
+        assert {
+          StrictRenderableCreator.renderable_default == {
+            age: "",
+            name: "",
+            location: {
+              lat: ""
             }
           }
         }

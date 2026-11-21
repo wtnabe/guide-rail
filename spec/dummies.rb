@@ -78,3 +78,26 @@ class NestedRenderableCreator
   class_name :NestedRenderable
   renderable true
 end
+
+StrictSchema = Dry::Schema.define do
+  required(:age).filled(:integer)
+  required(:name).maybe(:string)
+  required(:location).hash do
+    required(:lat).filled(:float)
+  end
+end
+
+class StrictCreator
+  extend GuideRail
+
+  schema StrictSchema
+  class_name :Strict
+end
+
+class StrictRenderableCreator
+  extend GuideRail
+
+  schema StrictSchema
+  class_name :StrictRenderable
+  renderable true
+end
