@@ -10,6 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "A factory library to create safe, immutable Data objects from various sources using dry-schema and Data ( Ruby 3.2+ )."
   spec.description = "GuideRail transforms various data sources into safe, immutable `Data` objects. By leveraging the robust validation capabilities of `dry-schema`, it provides a clear and declarative way to define, validate, and instantiate your data structures."
+  spec.license = "BSD-2-Clause"
   spec.homepage = "https://github.com/wtnabe/guide-rail"
   spec.required_ruby_version = ">= 3.2.0"
 

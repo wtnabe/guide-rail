@@ -1,3 +1,8 @@
+## [0.2.1] - 2026-11-22
+
+- Move internals to `GuideRail::Factory`. The extending class has only the DSL, `create_class!` and `from` as class methods
+- Add the license to the gemspec ( BSD-2-Clause )
+
 ## [0.2.0] - 2026-11-21
 
 - **Breaking**: values of the generated Data object come from the schema result ( `Dry::Schema::Result#to_h` ) instead of the input
