@@ -11,7 +11,7 @@ class GuideRail::Factory
   end
 
   #
-  # @param [Dry::Schema::Params] schema
+  # @param [Dry::Schema::Params|Dry::Schema::Processor] schema
   #
   def schema(schema)
     @_schema = schema

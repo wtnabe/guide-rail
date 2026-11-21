@@ -3,7 +3,7 @@ module GuideRail
   # See the writing guide of rbs: https://github.com/ruby/rbs#guides
 
   def class_name: (klass: String | Symbol) -> String | Symbol
-  def schema: (schema: Dry::Schema::Params) -> Dry::Schema::Params
+  def schema: (schema: Dry::Schema::Params | Dry::Schema::Processor) -> (Dry::Schema::Params | Dry::Schema::Processor)
   def renderable: (bool: bool) -> bool
   def yield_block: { } -> void
   def create_class!: () -> Data

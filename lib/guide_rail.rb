@@ -24,7 +24,7 @@ module GuideRail
   end
 
   #
-  # @param [Dry::Schema::Params] schema
+  # @param [Dry::Schema::Params|Dry::Schema::Processor] schema
   #
   def schema(schema)
     @_guide_rail_factory.schema(schema)
