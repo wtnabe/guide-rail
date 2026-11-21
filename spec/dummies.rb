@@ -124,3 +124,39 @@ class StrictRenderableCreator
   class_name :StrictRenderable
   renderable true
 end
+
+class OverridingCreator
+  extend GuideRail
+
+  schema SimpleNullableSchema
+  class_name :Overriding
+  renderable true
+  monadic true
+
+  def self.accept(data) = {}
+
+  def self.to_renderable(original, default = nil) = {}
+
+  def self.renderable_default = {}
+
+  def self.Success(value) = nil
+end
+
+OptionalSchema = Dry::Schema.Params do
+  optional(:name).filled(:string)
+end
+
+class OptionalAndYieldAccepter
+  extend GuideRail
+
+  class_name :ExtendedData
+  schema OptionalSchema
+  renderable true
+
+  yield_block do
+    alias_method :name_orig, :name
+    define_method :name do
+      "decorated #{name_orig}"
+    end
+  end
+end

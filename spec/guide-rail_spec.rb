@@ -13,42 +13,6 @@ class CreationTester
   class_name :CreationTesting
 end
 
-class GuidedClass
-  extend GuideRail
-end
-
-class TestingAmodel
-  include ActiveModel::API
-  include ActiveModel::Attributes
-
-  attribute :name
-end
-
-class TestingHashable
-  def to_hash
-    {name: "a"}
-  end
-end
-
-OptionalSchema = Dry::Schema.Params do
-  optional(:name).filled(:string)
-end
-
-class OptionalAndYieldAccepter
-  extend GuideRail
-
-  class_name :ExtendedData
-  schema OptionalSchema
-  renderable true
-
-  yield_block do
-    alias_method :name_orig, :name
-    define_method :name do
-      "decorated #{name_orig}"
-    end
-  end
-end
-
 describe GuideRail do
   describe ".create_class!" do
     before {
@@ -226,65 +190,17 @@ describe GuideRail do
     end
   end
 
-  describe ".accept" do
-    it "ActiveModel-like" do
+  describe "class methods of the extending class" do
+    it "only DSL, create_class! and from" do
       assert {
-        GuidedClass.accept(TestingAmodel.new(name: "a")) == {name: "a"}
+        (Class.new { extend GuideRail }.public_methods - Class.new.public_methods).sort == [
+          :class_name, :create_class!, :from, :monadic, :renderable, :schema, :yield_block
+        ]
       }
     end
 
-    it "Struct, OpenStruct, Hashie, ..." do
-      assert {
-        GuidedClass.accept(Struct.new(:name).new(name: "a")) == {name: "a"}
-      }
-    end
-
-    it "Hash" do
-      assert {
-        GuidedClass.accept({name: "a"}) == {name: "a"}
-      }
-    end
-
-    it "respond_to? :to_hash" do
-      assert {
-        GuidedClass.accept(TestingHashable.new) == {name: "a"}
-      }
-    end
-  end
-
-  describe ".renderable_default" do
-    describe "NestedRenderable" do
-      it {
-        assert {
-          NestedRenderableCreator.renderable_default == {
-            addr: "",
-            location: {
-              lat: "",
-              lon: ""
-            }
-          }
-        }
-      }
-    end
-
-    describe "define ( Symbol keys )" do
-      it {
-        assert {
-          StrictRenderableCreator.renderable_default == {
-            age: "",
-            name: "",
-            location: {
-              lat: ""
-            }
-          }
-        }
-      }
-    end
-
-    describe "optional" do
-      it {
-        OptionalAndYieldAccepter.renderable_default == {name: ""}
-      }
+    it "class methods of the same names as internals do not break from" do
+      assert { OverridingCreator.from(name: nil).value!.name == "" }
     end
   end
 
