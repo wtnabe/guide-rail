@@ -67,12 +67,14 @@ module GuideRail
     Object.const_get @_class
 
     if result.success?
+      # values come from schema result ( coerced and filtered by schema ), not from input
+      values = result.to_h
       new_value = Object.const_get(@_class).new(
         *(
           if @_renderable
-            to_renderable(acceptance)
+            to_renderable(values)
           else
-            acceptance
+            values
           end
         ).values_at(*@_attrs).map(&:freeze)
       )

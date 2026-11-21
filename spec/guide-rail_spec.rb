@@ -168,6 +168,62 @@ describe GuideRail do
         }
       end
     end
+
+    describe "values come from schema result" do
+      describe "Params" do
+        before {
+          @data = CoercingCreator.from(
+            age: "20",
+            active: "off",
+            score: "",
+            born_on: "2026-01-01",
+            rate: "1.5",
+            ids: ["1", "2"],
+            location: {lat: "35.6", extra: 1},
+            items: [{n: "1", extra: 1}]
+          )
+        }
+
+        it { assert { @data.age == 20 } }
+        it { assert { @data.active == false } }
+        it { assert { @data.score.nil? } }
+        it { assert { @data.born_on == Date.new(2026, 1, 1) } }
+        it { assert { @data.rate.is_a?(Float) } }
+        it { assert { @data.ids == [1, 2] } }
+        it { assert { @data.location == {lat: 35.6} } }
+        it { assert { @data.items == [{n: 1}] } }
+
+        it "string keys" do
+          assert { SimpleNonNullableCreator.from("name" => "a").name == "a" }
+        end
+
+        it "HashWithIndifferentAccess" do
+          input = ActiveSupport::HashWithIndifferentAccess.new(name: "a")
+
+          assert { SimpleNonNullableCreator.from(input).name == "a" }
+        end
+      end
+
+      describe "define" do
+        it "typed input as is" do
+          assert {
+            StrictCreator.from(age: 20, name: "", location: {lat: 35.6}).to_h ==
+              {age: 20, name: "", location: {lat: 35.6}}
+          }
+        end
+
+        it "keys not in schema are dropped" do
+          assert {
+            StrictCreator.from(age: 20, name: nil, location: {lat: 35.6, extra: 1}).location ==
+              {lat: 35.6}
+          }
+        end
+
+        it "no coercion" do
+          assert { StrictCreator.from(age: "20", name: nil, location: {lat: 35.6}).is_a? Dry::Schema::Result }
+        end
+      end
+    end
   end
 
   describe ".accept" do

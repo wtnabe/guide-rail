@@ -108,6 +108,31 @@ end
 OptionalAndYieldAccepter.from({}).name.start_with? "decorated" # => true
 ```
 
+### Choosing a schema
+
+Values of the generated Data object come from the schema result, not from the input as is. So the Data object has the values the schema validated.
+
+Use `Dry::Schema.define` for typed data such as hand-made Hashes or ActiveModel. Values are not coerced, and the Data object has the input values as is.
+
+Use `Dry::Schema.Params` for HTTP params. String keys are accepted, and values are coerced before validation.
+
+```ruby
+AgeSchema = Dry::Schema.Params do
+  required(:age).filled(:integer)
+end
+
+class AgeCreator
+  extend GuideRail
+
+  schema AgeSchema
+  class_name :Age
+end
+
+AgeCreator.from("age" => "20") # => #<data Age age=20>
+```
+
+In both cases, keys not in the schema are dropped, including those in nested Hashes.
+
 ### Monadic mode
 
 ```ruby

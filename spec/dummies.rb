@@ -1,4 +1,5 @@
 require "active_model"
+require "active_support/hash_with_indifferent_access"
 
 SimpleNonNullableSchema = Dry::Schema.Params do
   required(:name).filled(:string)
@@ -77,6 +78,28 @@ class NestedRenderableCreator
   schema NestedNullableSchema
   class_name :NestedRenderable
   renderable true
+end
+
+CoercingSchema = Dry::Schema.Params do
+  required(:age).filled(:integer)
+  required(:active).filled(:bool)
+  required(:score).maybe(:integer)
+  required(:born_on).filled(:date)
+  required(:rate).filled(:float)
+  required(:ids).array(:integer)
+  required(:location).hash do
+    required(:lat).filled(:float)
+  end
+  required(:items).array(:hash) do
+    required(:n).filled(:integer)
+  end
+end
+
+class CoercingCreator
+  extend GuideRail
+
+  schema CoercingSchema
+  class_name :Coercing
 end
 
 StrictSchema = Dry::Schema.define do
