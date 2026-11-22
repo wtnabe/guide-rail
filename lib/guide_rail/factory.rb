@@ -85,6 +85,16 @@ class GuideRail::Factory
   end
 
   #
+  # @param [#to_ary] collection
+  # @return [Array<Data|Dry::Schema::Result|Dry::Monads::Result<Data|Dry::Schema::Result>>]
+  #
+  def from_collection(collection)
+    raise ArgumentError, "from_collection accepts a collection ( #to_ary ). Use from for a single input" unless collection.respond_to?(:to_ary)
+
+    collection.to_ary.map { |data| from(data) }
+  end
+
+  #
   # @return [Array<Symbol>]
   #
   def all_member_names

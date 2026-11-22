@@ -8,7 +8,7 @@ require_relative "guide_rail/factory"
 Dry::Schema.load_extensions(:monads)
 
 #
-# Only the DSL, create_class! and from are exposed to the extending class.
+# Only the DSL, create_class!, from and from_collection are exposed to the extending class.
 # Others live in GuideRail::Factory, one instance per extending class.
 #
 module GuideRail
@@ -83,5 +83,16 @@ module GuideRail
   #
   def from(data)
     @_guide_rail_factory.from(data)
+  end
+
+  #
+  # Apply from to each element of a collection ( Array, ... ) and return
+  # the results in the same order. Each element succeeds or fails on its own.
+  #
+  # @param [#to_ary] collection
+  # @return [Array<Data|Dry::Schema::Result|Dry::Monads::Result<Data|Dry::Schema::Result>>]
+  #
+  def from_collection(collection)
+    @_guide_rail_factory.from_collection(collection)
   end
 end
