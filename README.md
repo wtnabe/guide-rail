@@ -132,6 +132,19 @@ UserView.from(first_name: "Jane", last_name: "Doe", role: "admin", status: "memb
 # => #<data User first_name="Jane", last_name="Doe", role="admin", status="owner", display_name="Jane Doe">
 ```
 
+### Collection input
+
+`from_collection` applies `from` to each element of a collection ( anything that responds to `to_ary`, e.g. Array ) and returns the results in the same order. Each element succeeds or fails on its own. With `monadic true` ( see [Monadic mode](#monadic-mode) ), each element is a `Dry::Monads::Result`.
+
+```ruby
+SimpleNonNullableCreator.from_collection([{name: "John"}, {}])
+# => [#<data SimpleNonNullable name="John">, #<Dry::Schema::Result{} errors={name: ["is missing"]} path=[]>]
+
+SimpleNonNullableCreator.from_collection([]) # => []
+```
+
+`from` raises `ArgumentError` for a collection, and `from_collection` raises `ArgumentError` for a single input.
+
 ### Extending the Data class
 
 `yield_block` gives a block to `Data.define` of the generated class. Use it for what cannot be an attribute, such as methods with arguments.

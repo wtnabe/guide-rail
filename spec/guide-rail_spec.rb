@@ -188,13 +188,71 @@ describe GuideRail do
         end
       end
     end
+
+    it "Array guides to from_collection" do
+      e = assert_raises(ArgumentError) { SimpleNonNullableCreator.from([{name: "a"}]) }
+
+      assert { e.message.include?("from_collection") }
+    end
+  end
+
+  describe ".from_collection" do
+    it "Array of Data" do
+      assert {
+        SimpleNonNullableCreator.from_collection([{name: "a"}, {name: "b"}]).map(&:to_h) ==
+          [{name: "a"}, {name: "b"}]
+      }
+    end
+
+    it "only the failed element is Dry::Schema::Result" do
+      results = SimpleNonNullableCreator.from_collection([{name: "a"}, {}, {name: "c"}])
+
+      assert { results.map(&:class) == [SimpleNonNullable, Dry::Schema::Result, SimpleNonNullable] }
+    end
+
+    it "empty" do
+      assert { SimpleNonNullableCreator.from_collection([]) == [] }
+    end
+
+    it "accepts #to_ary" do
+      collection = Object.new
+      def collection.to_ary = [{name: "a"}]
+
+      assert { SimpleNonNullableCreator.from_collection(collection).map(&:name) == ["a"] }
+    end
+
+    it "single input guides to from" do
+      e = assert_raises(ArgumentError) { SimpleNonNullableCreator.from_collection({name: "a"}) }
+
+      assert { e.message.include?("from") }
+    end
+
+    it "monadic returns Result for each element" do
+      results = SimpleNonNullableMonadicCreator.from_collection([{name: "a"}, {}])
+
+      assert { results.map(&:success?) == [true, false] }
+      assert { results.first.value!.name == "a" }
+    end
+
+    it "renderable applies to each element" do
+      assert { SimpleRenderableCreator.from_collection([{name: nil}, {name: "b"}]).map(&:name) == ["", "b"] }
+    end
+
+    it "computed applies to each element" do
+      input = {first_name: "Jane", last_name: "Doe", active: true, role: "admin", status: "member"}
+
+      assert {
+        UserView.from_collection([input, input.merge(first_name: "John")]).map(&:display_name) ==
+          ["Jane Doe", "John Doe"]
+      }
+    end
   end
 
   describe "class methods of the extending class" do
-    it "only DSL, create_class! and from" do
+    it "only DSL, create_class!, from and from_collection" do
       assert {
         (Class.new { extend GuideRail }.public_methods - Class.new.public_methods).sort == [
-          :class_name, :computed, :create_class!, :from, :monadic, :renderable, :schema, :yield_block
+          :class_name, :computed, :create_class!, :from, :from_collection, :monadic, :renderable, :schema, :yield_block
         ]
       }
     end

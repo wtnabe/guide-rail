@@ -1,3 +1,8 @@
+## [0.2.3] - 2026-11-22
+
+- Add `from_collection` to create Data objects from a collection ( each element is validated on its own )
+- `from` raises `ArgumentError` for a collection ( raised `TypeError` before )
+
 ## [0.2.2] - 2026-11-22
 
 - Add `computed` to define attributes derived from validated input

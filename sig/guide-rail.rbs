@@ -9,4 +9,5 @@ module GuideRail
   def computed: (Symbol name) { (untyped acc) -> untyped } -> Proc
   def create_class!: () -> Data
   def from: (untyped data) -> Data | Dry::Schema::Result | Dry::Monads::Result<Data | Dry::Schema::Result>
+  def from_collection: (_ToAry[untyped] collection) -> Array[Data | Dry::Schema::Result | Dry::Monads::Result<Data | Dry::Schema::Result>]
 end

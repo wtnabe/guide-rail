@@ -66,6 +66,8 @@ class GuideRail::Factory
   # @return [Data|Dry::Schema::Result|Dry::Monads::Result<Data|Dry::Schema::Result>]
   #
   def from(data)
+    raise ArgumentError, "from accepts a single input. Use from_collection for a collection" if data.respond_to?(:to_ary)
+
     acceptance = accept(data)
     create_class!
     result = @_schema.call(acceptance)
@@ -82,6 +84,16 @@ class GuideRail::Factory
     else
       @_monadic ? result.to_monad : result
     end
+  end
+
+  #
+  # @param [#to_ary] collection
+  # @return [Array<Data|Dry::Schema::Result|Dry::Monads::Result<Data|Dry::Schema::Result>>]
+  #
+  def from_collection(collection)
+    raise ArgumentError, "from_collection accepts a collection ( #to_ary ). Use from for a single input" unless collection.respond_to?(:to_ary)
+
+    collection.to_ary.map { |data| from(data) }
   end
 
   #
