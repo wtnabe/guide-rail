@@ -188,6 +188,12 @@ describe GuideRail do
         end
       end
     end
+
+    it "Array guides to from_collection" do
+      e = assert_raises(ArgumentError) { SimpleNonNullableCreator.from([{name: "a"}]) }
+
+      assert { e.message.include?("from_collection") }
+    end
   end
 
   describe ".from_collection" do
