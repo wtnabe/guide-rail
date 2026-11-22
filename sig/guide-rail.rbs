@@ -2,12 +2,13 @@ module GuideRail
   VERSION: String
   # See the writing guide of rbs: https://github.com/ruby/rbs#guides
 
-  def class_name: (klass: String | Symbol) -> String | Symbol
-  def schema: (schema: Dry::Schema::Params | Dry::Schema::Processor) -> (Dry::Schema::Params | Dry::Schema::Processor)
-  def renderable: (bool: bool) -> bool
-  def yield_block: { } -> void
+  def class_name: (String | Symbol klass) -> (String | Symbol)
+  def schema: (Dry::Schema::Params | Dry::Schema::Processor schema) -> (Dry::Schema::Params | Dry::Schema::Processor)
+  def monadic: (bool bool) -> bool
+  def renderable: (bool bool) -> bool
+  def yield_block: () { () -> void } -> Proc
   def computed: (Symbol name) { (untyped acc) -> untyped } -> Proc
-  def create_class!: () -> Data
-  def from: (untyped data) -> Data | Dry::Schema::Result | Dry::Monads::Result<Data | Dry::Schema::Result>
-  def from_collection: (_ToAry[untyped] collection) -> Array[Data | Dry::Schema::Result | Dry::Monads::Result<Data | Dry::Schema::Result>]
+  def create_class!: () -> singleton(Data)
+  def from: (untyped data) -> (Data | Dry::Schema::Result | Dry::Monads::Result)
+  def from_collection: (_ToAry[untyped] collection) -> Array[Data | Dry::Schema::Result | Dry::Monads::Result]
 end

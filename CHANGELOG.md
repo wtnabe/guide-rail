@@ -1,3 +1,10 @@
+## [0.2.4] - 2026-11-22
+
+- Fix syntax and arguments of `sig/guide-rail.rbs`. It could not be parsed by rbs since 0.1.0
+  - add `monadic`, which was missing
+  - `create_class!` returns `singleton(Data)` ( the class ), not `Data`
+  - `Dry::Monads::Result` has no type arguments, since there are no official type definitions of dry-monads
+
 ## [0.2.3] - 2026-11-22
 
 - Add `from_collection` to create Data objects from a collection ( each element is validated on its own )
