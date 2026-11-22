@@ -1,3 +1,7 @@
+## [0.2.2] - 2026-11-22
+
+- Add `computed` to define attributes derived from validated input
+
 ## [0.2.1] - 2026-11-22
 
 - Move internals to `GuideRail::Factory`. The extending class has only the DSL, `create_class!` and `from` as class methods

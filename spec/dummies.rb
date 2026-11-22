@@ -160,3 +160,86 @@ class OptionalAndYieldAccepter
     end
   end
 end
+
+# --- computed ---
+
+UserSchema = Dry::Schema.Params do
+  required(:first_name).filled(:string)
+  required(:last_name).filled(:string)
+  required(:active).filled(:bool)
+  required(:role).filled(:string)
+  required(:status).filled(:string)
+end
+
+class UserView
+  extend GuideRail
+
+  schema UserSchema
+  class_name :User
+
+  # new attr derived from input
+  computed :display_name do |acc|
+    "#{acc.first_name} #{acc.last_name}"
+  end
+
+  # conditional overwrite of a schema attr
+  computed :status do |acc|
+    (acc.active && acc.role == "admin") ? "owner" : acc.status
+  end
+
+  # observe acc: validated input only (status before overwrite), no writer, no other computed results
+  computed :observed do |acc|
+    {
+      status: acc.status,
+      writable: acc.respond_to?(:first_name=),
+      display_name: acc.respond_to?(:display_name)
+    }
+  end
+end
+
+class UserMonadicView
+  extend GuideRail
+
+  schema UserSchema
+  class_name :UserMonadic
+  monadic true
+
+  computed :display_name do |acc|
+    "#{acc.first_name} #{acc.last_name}"
+  end
+end
+
+class ComputedRenderableCreator
+  extend GuideRail
+
+  schema SimpleNullableSchema
+  class_name :ComputedRenderable
+  renderable true
+
+  computed :raw_name do |acc|
+    acc.name
+  end
+
+  computed :raw_name_nil do |acc|
+    acc.name.nil?
+  end
+
+  computed :nickname do |acc|
+    nil
+  end
+end
+
+ComputedParamsSchema = Dry::Schema.Params do
+  required(:age).filled(:integer)
+end
+
+class ComputedParamsCreator
+  extend GuideRail
+
+  schema ComputedParamsSchema
+  class_name :ComputedParams
+
+  computed :raw_age do |acc|
+    acc.age
+  end
+end

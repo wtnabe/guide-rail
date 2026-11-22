@@ -59,62 +59,7 @@ SimpleNonNullableCreator.from(name: "John") # => #<data SimpleNonNullable name="
 SimpleNonNullableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["is missing"]} path=[]>
 ```
 
-### Nullable Object with `renderable` option
-
-```ruby
-SimpleNullableSchema = Dry::Schema.define do
-  required(:name).maybe(:string)
-end
-
-class SimpleRenderableCreator
-  extend GuideRail
-
-  schema SimpleNullableSchema
-  class_name :SimpleRenderable
-  renderable true
-end
-
-SimpleRenderableCreator.from(name: nil) # => #<data SimpleRenderable name="">
-SimpleRenderableCreator.from(name: "John") # => #<data SimpleRenderable name="John">
-SimpleRenderableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["is missing"]} path=[]>
-```
-
-### extendable Data class
-
-You can give a block to Creator class, the generated Data class can be extended by the block ( applying to `define` class method ).
-
-This can be used to define decorator methods and conversion processes, so the generated Data class can also be used as a so-called ViewModel.
-
-```ruby
-OptionalSchema = Dry::Schema.define do
-  optional(:name).filled(:string)
-end
-
-class OptionalAndYieldAccepter
-  extend GuideRail
-
-  class_name :ExtendedData
-  schema OptionalSchema
-  renderable true
-
-  yield_block do
-    alias_method :name_orig, :name
-    define_method :name do
-      "decorated #{name_orig}"
-    end
-  end
-end
-
-OptionalAndYieldAccepter.from({}).name.start_with? "decorated" # => true
-```
-
-### Choosing a schema
-
-Values of the generated Data object come from the schema result, not from the input as is. So the Data object has the values the schema validated.
-
-Use `Dry::Schema.define` for typed data such as hand-made Hashes or ActiveModel. Values are not coerced, and the Data object has the input values as is.
-
-Use `Dry::Schema.Params` for HTTP params. String keys are accepted, and values are coerced before validation.
+Values of the generated Data object come from the schema result, so nested Hashes have only the keys in the schema. With `Dry::Schema.Params`, String keys are accepted and values are coerced:
 
 ```ruby
 AgeSchema = Dry::Schema.Params do
@@ -131,7 +76,89 @@ end
 AgeCreator.from("age" => "20") # => #<data Age age=20>
 ```
 
-In both cases, keys not in the schema are dropped, including those in nested Hashes.
+### Nullable Object with `renderable` option
+
+With `renderable`, `nil` and missing optional keys become `""`.
+
+```ruby
+SimpleNullableSchema = Dry::Schema.define do
+  required(:name).maybe(:string)
+  optional(:nickname).filled(:string)
+end
+
+class SimpleRenderableCreator
+  extend GuideRail
+
+  schema SimpleNullableSchema
+  class_name :SimpleRenderable
+  renderable true
+end
+
+SimpleRenderableCreator.from(name: nil) # => #<data SimpleRenderable name="", nickname="">
+SimpleRenderableCreator.from(name: "John", nickname: "Jack") # => #<data SimpleRenderable name="John", nickname="Jack">
+SimpleRenderableCreator.from({}) # => #<Dry::Schema::Result{} errors={name: ["is missing"]} path=[]>
+```
+
+### Computed attributes
+
+`computed` defines an attribute derived from validated input. The block receives `acc`, which has readers of validated input ( e.g. `acc.first_name` ), and returns the value. A new name adds a member to the generated Data class, and a name that exists in the schema overwrites the value.
+
+`acc` does not contain results of other computed attributes.
+
+```ruby
+UserSchema = Dry::Schema.define do
+  required(:first_name).filled(:string)
+  required(:last_name).filled(:string)
+  required(:role).filled(:string)
+  required(:status).filled(:string)
+end
+
+class UserView
+  extend GuideRail
+
+  schema UserSchema
+  class_name :User
+
+  computed :display_name do |acc|
+    "#{acc.first_name} #{acc.last_name}"
+  end
+
+  computed :status do |acc|
+    (acc.role == "admin") ? "owner" : acc.status
+  end
+end
+
+UserView.from(first_name: "Jane", last_name: "Doe", role: "admin", status: "member")
+# => #<data User first_name="Jane", last_name="Doe", role="admin", status="owner", display_name="Jane Doe">
+```
+
+### Extending the Data class
+
+`yield_block` gives a block to `Data.define` of the generated class. Use it for what cannot be an attribute, such as methods with arguments.
+
+```ruby
+NameSchema = Dry::Schema.define do
+  required(:first_name).filled(:string)
+  required(:last_name).filled(:string)
+end
+
+class NameView
+  extend GuideRail
+
+  schema NameSchema
+  class_name :Name
+
+  yield_block do
+    def full_name(order: :western)
+      (order == :eastern) ? "#{last_name} #{first_name}" : "#{first_name} #{last_name}"
+    end
+  end
+end
+
+name = NameView.from(first_name: "Taro", last_name: "Yamada")
+name.full_name # => "Taro Yamada"
+name.full_name(order: :eastern) # => "Yamada Taro"
+```
 
 ### Monadic mode
 

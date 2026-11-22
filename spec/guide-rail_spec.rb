@@ -194,7 +194,7 @@ describe GuideRail do
     it "only DSL, create_class! and from" do
       assert {
         (Class.new { extend GuideRail }.public_methods - Class.new.public_methods).sort == [
-          :class_name, :create_class!, :from, :monadic, :renderable, :schema, :yield_block
+          :class_name, :computed, :create_class!, :from, :monadic, :renderable, :schema, :yield_block
         ]
       }
     end
@@ -210,5 +210,97 @@ describe GuideRail do
         OptionalAndYieldAccepter.from({}).name.start_with? "decorated"
       }
     }
+  end
+
+  describe ".computed" do
+    before {
+      @input = {
+        first_name: "Jane", last_name: "Doe",
+        active: true, role: "admin", status: "member"
+      }
+    }
+
+    it "members are schema attrs + computed attrs without duplication" do
+      assert {
+        UserView.from(@input).members == [:first_name, :last_name, :active, :role, :status, :display_name, :observed]
+      }
+    end
+
+    it "derives a new attr" do
+      assert { UserView.from(@input).display_name == "Jane Doe" }
+    end
+
+    it "overwrites a schema attr conditionally" do
+      assert { UserView.from(@input).status == "owner" }
+      assert { UserView.from(@input.merge(role: "user")).status == "member" }
+    end
+
+    describe "acc" do
+      before {
+        @observed = UserView.from(@input).observed
+      }
+
+      it "holds validated input, not overwritten value" do
+        assert { @observed[:status] == "member" }
+      end
+
+      it "has no writer" do
+        assert { @observed[:writable] == false }
+      end
+
+      it "does not contain other computed results" do
+        assert { @observed[:display_name] == false }
+      end
+    end
+
+    it "computed value is frozen" do
+      assert { UserView.from(@input).display_name.frozen? }
+    end
+
+    it "requires a block" do
+      assert_raises(ArgumentError) { Class.new { extend GuideRail }.computed(:foo) }
+    end
+
+    it "schema failure skips computed" do
+      assert { UserView.from({}).is_a?(Dry::Schema::Result) }
+    end
+
+    describe "with monadic" do
+      it "Success carries computed attr" do
+        assert { UserMonadicView.from(@input).value!.display_name == "Jane Doe" }
+      end
+
+      it "Failure on schema failure" do
+        assert { UserMonadicView.from({}).failure? }
+      end
+    end
+
+    describe "with Params" do
+      it "acc receives coerced values" do
+        assert { ComputedParamsCreator.from(age: "20").raw_age == 20 }
+      end
+
+      it "acc receives values from String keys" do
+        assert { ComputedParamsCreator.from("age" => 20).raw_age == 20 }
+      end
+    end
+
+    describe "with renderable" do
+      before {
+        @renderable = ComputedRenderableCreator.from(name: nil)
+      }
+
+      it "acc receives validated input as is, not renderable values" do
+        assert { @renderable.raw_name_nil == true }
+      end
+
+      it "renderable applies to computed attrs in output" do
+        assert { @renderable.raw_name == "" && @renderable.nickname == "" }
+      end
+
+      it "renderable applies to schema attrs in output" do
+        assert { @renderable.name == "" }
+      end
+    end
   end
 end

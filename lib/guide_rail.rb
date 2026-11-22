@@ -24,7 +24,7 @@ module GuideRail
   end
 
   #
-  # @param [Dry::Schema::Params] schema
+  # @param [Dry::Schema::Params|Dry::Schema::Processor] schema
   #
   def schema(schema)
     @_guide_rail_factory.schema(schema)
@@ -49,6 +49,22 @@ module GuideRail
   #
   def yield_block(&block)
     @_guide_rail_factory.yield_block(&block)
+  end
+
+  #
+  # Define a computed attribute derived from validated input.
+  # The block receives acc ( read-only accessor of validated input ) and
+  # returns the value. Same name as a schema attr overwrites it.
+  #
+  #   computed :display_name do |acc|
+  #     "#{acc.first_name} #{acc.last_name}"
+  #   end
+  #
+  # @param [Symbol] name
+  # @param [Proc] block
+  #
+  def computed(name, &block)
+    @_guide_rail_factory.computed(name, &block)
   end
 
   #
