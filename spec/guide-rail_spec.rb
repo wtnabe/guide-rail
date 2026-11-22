@@ -359,6 +359,20 @@ describe GuideRail do
       it "renderable applies to schema attrs in output" do
         assert { @renderable.name == "" }
       end
+
+      describe "overwriting a nested schema attr" do
+        before {
+          @nested = ComputedNestedRenderableCreator.from(addr: nil, location: nil)
+        }
+
+        it "nil gets the default of the schema shape" do
+          assert { @nested.location == {lat: "", lon: ""} }
+        end
+
+        it "new computed attr gets zero length string" do
+          assert { @nested.label == "" }
+        end
+      end
     end
   end
 end
