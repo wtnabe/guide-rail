@@ -7,7 +7,7 @@ class GuideRail::Factory
   # @param [String|Symbol] klass
   #
   def class_name(klass)
-    @_class = klass
+    @_class_name = klass
   end
 
   #
@@ -52,12 +52,12 @@ class GuideRail::Factory
   # @return [Data]
   #
   def create_class!
-    Object.const_get @_class
+    Object.const_get @_class_name
   rescue NameError
-    @_attrs = @_schema.key_map.to_a.map { |k| k.name.to_sym }
-    @_input_class = Data.define(*@_attrs)
+    @_schema_attrs = @_schema.key_map.to_a.map { |k| k.name.to_sym }
+    @_acc_class = Data.define(*@_schema_attrs)
     klass = Data.define(*all_member_names, &@_block)
-    Object.const_set(@_class, klass)
+    Object.const_set(@_class_name, klass)
     klass
   end
 
@@ -69,15 +69,14 @@ class GuideRail::Factory
     acceptance = accept(data)
     create_class!
     result = @_schema.call(acceptance)
-    Object.const_get @_class
+    Object.const_get @_class_name
 
     if result.success?
-      schema_values = result.to_h
-      values = @_attrs.to_h { |k| [k, schema_values[k].freeze] }
+      values = schema_values(result)
       values.merge!(compute(values))
-      values = to_renderable(values, renderable_default.merge(computed_renderable_default)) if @_renderable
+      values = to_renderable(values, renderable_default.merge(computed_shallow_renderable_default)) if @_renderable
 
-      new_value = Object.const_get(@_class).new(*values.values_at(*all_member_names).map(&:freeze))
+      new_value = Object.const_get(@_class_name).new(*values.values_at(*all_member_names).map(&:freeze))
 
       @_monadic ? Success(new_value) : new_value
     else
@@ -89,12 +88,25 @@ class GuideRail::Factory
   # @return [Array<Symbol>]
   #
   def all_member_names
-    (@_attrs + (@_computeds || {}).keys).uniq
+    (@_schema_attrs + (@_computeds || {}).keys).uniq
   end
 
   #
-  # acc is a Data of validated input as is ( before renderable ), so it has
-  # no writers and results of other computeds are not visible.
+  # Values come from the schema result, so they are coerced by dry-schema
+  # ( e.g. "20" -> 20 with Params ). Keys are aligned to the schema attrs
+  # ( missing optional keys become nil ) and values are frozen.
+  #
+  # @param [Dry::Schema::Result] result
+  # @return [Hash]
+  #
+  def schema_values(result)
+    values = result.to_h
+    @_schema_attrs.to_h { |k| [k, values[k].freeze] }
+  end
+
+  #
+  # Evaluate each computed block with acc made of validated input and
+  # return the results by name.
   #
   # @param [Hash] values
   # @return [Hash]
@@ -102,14 +114,14 @@ class GuideRail::Factory
   def compute(values)
     return {} unless @_computeds
 
-    acc = @_input_class.new(**values)
+    acc = @_acc_class.new(**values)
     @_computeds.transform_values { |block| block.call(acc).freeze }
   end
 
   #
   # @return [Hash]
   #
-  def computed_renderable_default
+  def computed_shallow_renderable_default
     (@_computeds || {}).keys.to_h { |k| [k, ""] }
   end
 
