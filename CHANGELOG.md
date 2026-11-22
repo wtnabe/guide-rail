@@ -1,3 +1,7 @@
+## [0.2.5] - 2026-11-22
+
+- Fix `renderable` with `computed` overwriting a nested schema attr. When the computed returns `nil`, the default of the schema shape ( e.g. `{lat: "", lon: ""}` ) is set instead of `""`
+
 ## [0.2.4] - 2026-11-22
 
 - Fix syntax and arguments of `sig/guide-rail.rbs`. It could not be parsed by rbs since 0.1.0

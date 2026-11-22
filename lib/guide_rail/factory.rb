@@ -76,7 +76,7 @@ class GuideRail::Factory
     if result.success?
       values = schema_values(result)
       values.merge!(compute(values))
-      values = to_renderable(values, renderable_default.merge(computed_shallow_renderable_default)) if @_renderable
+      values = to_renderable(values, computed_shallow_renderable_default.merge(renderable_default)) if @_renderable
 
       new_value = Object.const_get(@_class_name).new(*values.values_at(*all_member_names).map(&:freeze))
 
@@ -130,6 +130,9 @@ class GuideRail::Factory
     @_computeds.transform_values { |block| block.call(acc).freeze }
   end
 
+  #
+  # Computed attrs have no shape, so the default is "". For a computed attr
+  # overwriting a schema attr, the default of the schema shape takes precedence.
   #
   # @return [Hash]
   #

@@ -229,6 +229,22 @@ class ComputedRenderableCreator
   end
 end
 
+class ComputedNestedRenderableCreator
+  extend GuideRail
+
+  schema NestedNullableSchema
+  class_name :ComputedNestedRenderable
+  renderable true
+
+  computed :location do |acc|
+    acc.location&.merge(label: acc.addr)
+  end
+
+  computed :label do |acc|
+    nil
+  end
+end
+
 ComputedParamsSchema = Dry::Schema.Params do
   required(:age).filled(:integer)
 end
