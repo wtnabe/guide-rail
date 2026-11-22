@@ -10,4 +10,9 @@ end
 
 require "standard/rake"
 
-task default: %i[spec standard]
+desc "Check syntax of sig/**/*.rbs"
+task :rbs do
+  sh "rbs", "parse", *Dir["sig/**/*.rbs"]
+end
+
+task default: %i[spec standard rbs]

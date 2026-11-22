@@ -13,4 +13,6 @@ gem "minitest-power_assert"
 
 gem "standard", "~> 1.3"
 
+gem "rbs"
+
 gem "activemodel"
