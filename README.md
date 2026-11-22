@@ -18,6 +18,8 @@ It acts as a "guide rail," ensuring that data flowing into your application (e.g
 
 ## Installation
 
+Requires Ruby 3.2 or later. CI tests with Ruby 3.2, 3.3, 3.4 and 4.0.
+
 Add this line to your application's Gemfile:
 
 ```ruby
