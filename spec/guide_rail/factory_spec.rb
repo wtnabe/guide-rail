@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require_relative "../dummies"
-
-class GuidedClass
-  extend GuideRail
-end
+require_relative "../patterns"
 
 class TestingAmodel
   include ActiveModel::API
@@ -21,73 +17,48 @@ class TestingHashable
 end
 
 describe GuideRail::Factory do
-  #
-  # @param [Class] creator
-  # @return [GuideRail::Factory]
-  #
-  def factory_of(creator)
-    creator.instance_variable_get(:@_guide_rail_factory)
-  end
-
   describe "#accept" do
+    factory = factory_of(creator(Schemas::NAME_REQUIRED))
+
     it "ActiveModel-like" do
-      assert {
-        factory_of(GuidedClass).accept(TestingAmodel.new(name: "a")) == {name: "a"}
-      }
+      assert { factory.accept(TestingAmodel.new(name: "a")) == {name: "a"} }
     end
 
-    it "Struct, OpenStruct, Hashie, ..." do
-      assert {
-        factory_of(GuidedClass).accept(Struct.new(:name).new(name: "a")) == {name: "a"}
-      }
+    it "Struct" do
+      assert { factory.accept(Struct.new(:name).new(name: "a")) == {name: "a"} }
     end
 
     it "Hash" do
-      assert {
-        factory_of(GuidedClass).accept({name: "a"}) == {name: "a"}
-      }
+      assert { factory.accept({name: "a"}) == {name: "a"} }
     end
 
     it "respond_to? :to_hash" do
-      assert {
-        factory_of(GuidedClass).accept(TestingHashable.new) == {name: "a"}
-      }
+      assert { factory.accept(TestingHashable.new) == {name: "a"} }
     end
   end
 
   describe "#renderable_default" do
-    describe "NestedRenderable" do
-      it {
-        assert {
-          factory_of(NestedRenderableCreator).renderable_default == {
-            addr: "",
-            location: {
-              lat: "",
-              lon: ""
-            }
-          }
+    it "nested schema has the nested shape" do
+      assert {
+        factory_of(creator(Schemas::NESTED_NULLABLE)).renderable_default == {
+          addr: "",
+          location: {lat: "", lon: ""}
         }
       }
     end
 
-    describe "define ( Symbol keys )" do
-      it {
-        assert {
-          factory_of(StrictRenderableCreator).renderable_default == {
-            age: "",
-            name: "",
-            location: {
-              lat: ""
-            }
-          }
+    it "define ( Symbol keys )" do
+      assert {
+        factory_of(creator(Schemas::STRICT)).renderable_default == {
+          age: "",
+          name: "",
+          location: {lat: ""}
         }
       }
     end
 
-    describe "optional" do
-      it {
-        factory_of(OptionalAndYieldAccepter).renderable_default == {name: ""}
-      }
+    it "optional key" do
+      assert { factory_of(creator(Schemas::NAME_OPTIONAL)).renderable_default == {name: ""} }
     end
   end
 end
