@@ -1,3 +1,12 @@
+## [0.2.6] - 2026-11-23
+
+No change in the code from 0.2.5. Only README, CHANGELOG and the version differ in the package.
+
+- README: add techniques of `computed`
+  - share a method among computed attributes, as a class method of the extending class
+  - add or replace values in a nested Hash, by returning a new Hash that replaces the whole attribute
+- Restructure tests by schema and input patterns. No change in behavior
+
 ## [0.2.5] - 2026-11-22
 
 - Fix `renderable` with `computed` overwriting a nested schema attr. When the computed returns `nil`, the default of the schema shape ( e.g. `{lat: "", lon: ""}` ) is set instead of `""`
