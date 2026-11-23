@@ -229,6 +229,23 @@ class ComputedRenderableCreator
   end
 end
 
+class ComputedSharedLogicCreator
+  extend GuideRail
+
+  schema UserSchema
+  class_name :ComputedSharedLogic
+
+  def self.display_name_of(acc) = "#{acc.first_name} #{acc.last_name}"
+
+  computed :display_name do |acc|
+    display_name_of(acc)
+  end
+
+  computed :message do |acc|
+    "Hello, #{display_name_of(acc)}"
+  end
+end
+
 class ComputedNestedRenderableCreator
   extend GuideRail
 

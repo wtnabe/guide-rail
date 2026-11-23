@@ -315,6 +315,13 @@ describe GuideRail do
       assert { UserView.from(@input).display_name.frozen? }
     end
 
+    it "block can call class methods of the extending class" do
+      assert {
+        ComputedSharedLogicCreator.from(@input).then { |d| [d.display_name, d.message] } ==
+          ["Jane Doe", "Hello, Jane Doe"]
+      }
+    end
+
     it "requires a block" do
       assert_raises(ArgumentError) { Class.new { extend GuideRail }.computed(:foo) }
     end
