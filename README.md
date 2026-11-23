@@ -134,6 +134,73 @@ UserView.from(first_name: "Jane", last_name: "Doe", role: "admin", status: "memb
 # => #<data User first_name="Jane", last_name="Doe", role="admin", status="owner", display_name="Jane Doe">
 ```
 
+#### Sharing a method among computed attributes
+
+There is no dedicated DSL for sharing logic, but the block of `computed` is a closure evaluated with `self` as the class that extends GuideRail, so it can call class methods of the class. A class method can be used from multiple computed attributes.
+
+```ruby
+GreetingSchema = Dry::Schema.define do
+  required(:first_name).filled(:string)
+  required(:last_name).filled(:string)
+end
+
+class GreetingView
+  extend GuideRail
+
+  schema GreetingSchema
+  class_name :Greeting
+
+  def self.display_name_of(acc) = "#{acc.first_name} #{acc.last_name}"
+
+  computed :display_name do |acc|
+    display_name_of(acc)
+  end
+
+  computed :message do |acc|
+    "Hello, #{display_name_of(acc)}"
+  end
+end
+
+GreetingView.from(first_name: "Jane", last_name: "Doe")
+# => #<data Greeting first_name="Jane", last_name="Doe", display_name="Jane Doe", message="Hello, Jane Doe">
+```
+
+Both are computed attributes, so `renderable`, `to_h`, pattern matching and freezing apply to them. The method runs once per computed that calls it.
+
+If the value does not need to be an attribute, a method in [`yield_block`](#extending-the-data-class) can read other attributes as well. Note that it is not a member ( not in `to_h` or pattern matching ), and with `renderable` it reads the output values ( `""` instead of `nil` ) and its own `nil` is not converted.
+
+#### Adding or replacing values in a nested Hash
+
+Overwriting works for a nested Hash attribute as well. Return a new Hash ( e.g. by `Hash#merge` ) to add a key or replace only some of its values. `acc` itself is not changed.
+
+```ruby
+LocationSchema = Dry::Schema.Params do
+  required(:addr).filled(:string)
+  required(:location).maybe do
+    hash do
+      required(:lat).maybe(:float)
+      required(:lon).maybe(:float)
+    end
+  end
+end
+
+class PlaceView
+  extend GuideRail
+
+  schema LocationSchema
+  class_name :Place
+
+  computed :location do |acc|
+    acc.location&.merge(label: acc.addr, lat: acc.location[:lat]&.round(1))
+  end
+end
+
+PlaceView.from(addr: "Tokyo", location: {lat: "35.6812", lon: "139.7671"})
+# => #<data Place addr="Tokyo", location={lat: 35.7, lon: 139.7671, label: "Tokyo"}>
+```
+
+With `renderable`, use 0.2.5 or later. When the computed returns `nil`, the default of the schema shape ( `{lat: "", lon: ""}` ) is set. Before 0.2.5, it was `""`.
+
 ### Collection input
 
 `from_collection` applies `from` to each element of a collection ( anything that responds to `to_ary`, e.g. Array ) and returns the results in the same order. Each element succeeds or fails on its own. With `monadic true` ( see [Monadic mode](#monadic-mode) ), each element is a `Dry::Monads::Result`.

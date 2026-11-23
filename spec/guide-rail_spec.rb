@@ -1,254 +1,244 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require_relative "dummies"
-
-CreationTestingSchema = Dry::Schema.Params do
-end
-
-class CreationTester
-  extend GuideRail
-
-  schema CreationTestingSchema
-  class_name :CreationTesting
-end
+require_relative "patterns"
 
 describe GuideRail do
   describe ".create_class!" do
-    before {
-      @klass = CreationTester.create_class!
-    }
+    klass = creator(Schemas::NAME_REQUIRED).create_class!
 
-    it {
-      assert { @klass.superclass == Data }
-    }
+    it "is a subclass of Data" do
+      assert { klass.superclass == Data }
+    end
 
-    it {
-      assert { @klass.to_s == "CreationTesting" }
-    }
+    it "is named by class_name" do
+      assert { klass.to_s == "NameRequired" }
+    end
   end
 
   describe ".from" do
-    describe "success / failure" do
-      describe "pattern match Data class ( default )" do
-        it "schema validation failed" do
-          assert {
-            case SimpleNonNullableCreator.from({})
-            when Data
-              false
-            when Dry::Schema::Result # "else", it's OK
-              true
-            end
-          }
+    describe "NAME_REQUIRED" do
+      plain = creator(Schemas::NAME_REQUIRED)
+      monadic = creator(Schemas::NAME_REQUIRED, monadic: true)
+
+      valid = {name: "a"}
+      missing = {}
+
+      it "given String keys, accepts them" do
+        assert { plain.from("name" => "a").name == "a" }
+      end
+
+      it "given HashWithIndifferentAccess, accepts it" do
+        assert { plain.from(ActiveSupport::HashWithIndifferentAccess.new(valid)).name == "a" }
+      end
+
+      it "given a collection, raises ArgumentError guiding to from_collection" do
+        e = assert_raises(ArgumentError) { plain.from([valid]) }
+
+        assert { e.message.include?("from_collection") }
+      end
+
+      describe "plain" do
+        it "given valid input, returns Data" do
+          data = plain.from(valid)
+
+          assert { data.is_a?(Data) && data.to_h == {name: "a"} }
         end
 
-        it "schema validation succeeded" do
-          assert {
-            case SimpleNonNullableCreator.from(name: "a")
-            when Data
-              true
-            when Dry::Schema::Result # "else", it's OK
-              false
-            end
-          }
+        it "given invalid input, returns Dry::Schema::Result" do
+          assert { plain.from(missing).is_a?(Dry::Schema::Result) }
         end
       end
 
-      describe "monadic option enabled, return Dry::Monads::Result" do
-        it "schema validation failed" do
-          assert {
-            SimpleNonNullableMonadicCreator.from({}).either(
-              ->(e) { false },
-              ->(e) { true }
-            )
-          }
+      describe "monadic" do
+        it "given valid input, returns Success" do
+          assert { monadic.from(valid).success? }
         end
 
-        it "schema validation succeeded" do
-          assert {
-            SimpleNonNullableMonadicCreator.from(name: "a").either(
-              ->(e) { true },
-              ->(e) { false }
-            )
-          }
+        it "given invalid input, returns Failure" do
+          assert { monadic.from(missing).failure? }
         end
       end
     end
 
-    describe "value features" do
-      it "SimpleNonNullable" do
+    describe "NAME_NULLABLE" do
+      name_nil = {name: nil}
+
+      describe "plain" do
+        it "given nil, keeps nil" do
+          assert { creator(Schemas::NAME_NULLABLE).from(name_nil).name.nil? }
+        end
+      end
+
+      describe "renderable" do
+        it "given nil, becomes zero length string" do
+          assert { creator(Schemas::NAME_NULLABLE, renderable: true).from(name_nil).name == "" }
+        end
+      end
+    end
+
+    describe "NAME_OPTIONAL" do
+      describe "renderable" do
+        it "given no key, becomes zero length string" do
+          assert { creator(Schemas::NAME_OPTIONAL, renderable: true).from({}).name == "" }
+        end
+      end
+    end
+
+    describe "NESTED_NULLABLE" do
+      plain = creator(Schemas::NESTED_NULLABLE)
+      renderable = creator(Schemas::NESTED_NULLABLE, renderable: true)
+
+      location_nil = {addr: "a", location: nil}
+      location_given = {addr: "a", location: {lat: 35.6, lon: 139.7}}
+
+      it "given a Hash, the Hash is frozen" do
+        assert_raises(FrozenError) { plain.from(location_given).location[:lat] = 0.0 }
+      end
+
+      describe "plain" do
+        it "given nil, keeps nil" do
+          assert { plain.from(location_nil).location.nil? }
+        end
+      end
+
+      describe "renderable" do
+        it "given non-nil addr, keeps it" do
+          assert { renderable.from(location_nil).addr == "a" }
+        end
+
+        it "given nil, becomes the default of the schema shape" do
+          assert { renderable.from(location_nil).location == {lat: "", lon: ""} }
+        end
+      end
+    end
+
+    describe "COERCING ( Params )" do
+      it "given values to coerce, coerces them and drops keys not in schema" do
+        data = creator(Schemas::COERCING).from(
+          age: "20",
+          active: "off",
+          score: "",
+          born_on: "2026-01-01",
+          rate: "1.5",
+          ids: ["1", "2"],
+          location: {lat: "35.6", extra: 1},
+          items: [{n: "1", extra: 1}]
+        )
+
         assert {
-          SimpleNonNullableCreator.from(name: "c").to_h == {name: "c"}
-        }
-      end
-
-      describe "SimpleNullable" do
-        it {
-          nullable = SimpleNullableCreator.from(name: nil)
-
-          assert { nullable.name.nil? }
-        }
-      end
-
-      describe "SimpleRenderable" do
-        it {
-          renderable = SimpleRenderableCreator.from(name: nil)
-
-          assert { !renderable.name.nil? }
-        }
-      end
-
-      describe "NestedNullable" do
-        it {
-          nullable = NestedNullableCreator.from(addr: nil, location: nil)
-
-          assert { nullable.addr.nil? && nullable.location.nil? }
-        }
-      end
-
-      describe "NestedRenderable" do
-        before {
-          @renderable = NestedRenderableCreator.from(addr: "a", location: nil)
-        }
-
-        it "non-nil is alive, nil is converted to zero length string" do
-          assert {
-            @renderable.addr == "a" && !@renderable.location.dig(:lat).nil?
+          data.to_h == {
+            age: 20,
+            active: false,
+            score: nil,
+            born_on: Date.new(2026, 1, 1),
+            rate: 1.5,
+            ids: [1, 2],
+            location: {lat: 35.6},
+            items: [{n: 1}]
           }
-        end
-
-        it "Hash value is freezed" do
-          assert_raises FrozenError do
-            @renderable.location[:lat] = 123.456
-          end
-        end
-      end
-
-      describe "StrictRenderable ( define )" do
-        it {
-          renderable = StrictRenderableCreator.from(age: 20, name: nil, location: {lat: 35.6})
-
-          assert { renderable.name == "" }
         }
       end
     end
 
-    describe "values come from schema result" do
-      describe "Params" do
-        before {
-          @data = CoercingCreator.from(
-            age: "20",
-            active: "off",
-            score: "",
-            born_on: "2026-01-01",
-            rate: "1.5",
-            ids: ["1", "2"],
-            location: {lat: "35.6", extra: 1},
-            items: [{n: "1", extra: 1}]
-          )
+    describe "STRICT ( define )" do
+      plain = creator(Schemas::STRICT)
+      renderable = creator(Schemas::STRICT, renderable: true)
+
+      it "given typed values, keeps them as is" do
+        assert {
+          plain.from(age: 20, name: "", location: {lat: 35.6}).to_h ==
+            {age: 20, name: "", location: {lat: 35.6}}
         }
-
-        it { assert { @data.age == 20 } }
-        it { assert { @data.active == false } }
-        it { assert { @data.score.nil? } }
-        it { assert { @data.born_on == Date.new(2026, 1, 1) } }
-        it { assert { @data.rate.is_a?(Float) } }
-        it { assert { @data.ids == [1, 2] } }
-        it { assert { @data.location == {lat: 35.6} } }
-        it { assert { @data.items == [{n: 1}] } }
-
-        it "string keys" do
-          assert { SimpleNonNullableCreator.from("name" => "a").name == "a" }
-        end
-
-        it "HashWithIndifferentAccess" do
-          input = ActiveSupport::HashWithIndifferentAccess.new(name: "a")
-
-          assert { SimpleNonNullableCreator.from(input).name == "a" }
-        end
       end
 
-      describe "define" do
-        it "typed input as is" do
-          assert {
-            StrictCreator.from(age: 20, name: "", location: {lat: 35.6}).to_h ==
-              {age: 20, name: "", location: {lat: 35.6}}
-          }
-        end
+      it "given keys not in schema, drops them" do
+        assert { plain.from(age: 20, name: nil, location: {lat: 35.6, extra: 1}).location == {lat: 35.6} }
+      end
 
-        it "keys not in schema are dropped" do
-          assert {
-            StrictCreator.from(age: 20, name: nil, location: {lat: 35.6, extra: 1}).location ==
-              {lat: 35.6}
-          }
-        end
+      it "given a value to coerce, returns Dry::Schema::Result ( no coercion )" do
+        assert { plain.from(age: "20", name: nil, location: {lat: 35.6}).is_a?(Dry::Schema::Result) }
+      end
 
-        it "no coercion" do
-          assert { StrictCreator.from(age: "20", name: nil, location: {lat: 35.6}).is_a? Dry::Schema::Result }
+      describe "renderable" do
+        it "given nil, becomes zero length string" do
+          assert { renderable.from(age: 20, name: nil, location: {lat: 35.6}).name == "" }
         end
       end
-    end
-
-    it "Array guides to from_collection" do
-      e = assert_raises(ArgumentError) { SimpleNonNullableCreator.from([{name: "a"}]) }
-
-      assert { e.message.include?("from_collection") }
     end
   end
 
   describe ".from_collection" do
+    plain = creator(Schemas::NAME_REQUIRED)
+
+    with_computed = creator(Schemas::USER) do
+      computed :display_name do |acc|
+        "#{acc.first_name} #{acc.last_name}"
+      end
+    end
+
     it "Array of Data" do
-      assert {
-        SimpleNonNullableCreator.from_collection([{name: "a"}, {name: "b"}]).map(&:to_h) ==
-          [{name: "a"}, {name: "b"}]
-      }
+      assert { plain.from_collection([{name: "a"}, {name: "b"}]).map(&:to_h) == [{name: "a"}, {name: "b"}] }
     end
 
     it "only the failed element is Dry::Schema::Result" do
-      results = SimpleNonNullableCreator.from_collection([{name: "a"}, {}, {name: "c"}])
+      results = plain.from_collection([{name: "a"}, {}, {name: "c"}])
 
-      assert { results.map(&:class) == [SimpleNonNullable, Dry::Schema::Result, SimpleNonNullable] }
+      assert { results.map { |r| r.is_a?(Dry::Schema::Result) } == [false, true, false] }
     end
 
     it "empty" do
-      assert { SimpleNonNullableCreator.from_collection([]) == [] }
+      assert { plain.from_collection([]) == [] }
     end
 
     it "accepts #to_ary" do
       collection = Object.new
       def collection.to_ary = [{name: "a"}]
 
-      assert { SimpleNonNullableCreator.from_collection(collection).map(&:name) == ["a"] }
+      assert { plain.from_collection(collection).map(&:name) == ["a"] }
     end
 
-    it "single input guides to from" do
-      e = assert_raises(ArgumentError) { SimpleNonNullableCreator.from_collection({name: "a"}) }
+    it "single input raises ArgumentError guiding to from" do
+      e = assert_raises(ArgumentError) { plain.from_collection({name: "a"}) }
 
       assert { e.message.include?("from") }
     end
 
     it "monadic returns Result for each element" do
-      results = SimpleNonNullableMonadicCreator.from_collection([{name: "a"}, {}])
+      results = creator(Schemas::NAME_REQUIRED, monadic: true).from_collection([{name: "a"}, {}])
 
       assert { results.map(&:success?) == [true, false] }
       assert { results.first.value!.name == "a" }
     end
 
     it "renderable applies to each element" do
-      assert { SimpleRenderableCreator.from_collection([{name: nil}, {name: "b"}]).map(&:name) == ["", "b"] }
+      assert {
+        creator(Schemas::NAME_NULLABLE, renderable: true).from_collection([{name: nil}, {name: "b"}]).map(&:name) ==
+          ["", "b"]
+      }
     end
 
     it "computed applies to each element" do
       input = {first_name: "Jane", last_name: "Doe", active: true, role: "admin", status: "member"}
 
       assert {
-        UserView.from_collection([input, input.merge(first_name: "John")]).map(&:display_name) ==
+        with_computed.from_collection([input, input.merge(first_name: "John")]).map(&:display_name) ==
           ["Jane Doe", "John Doe"]
       }
     end
   end
 
   describe "class methods of the extending class" do
+    overriding = creator(Schemas::NAME_NULLABLE, renderable: true, monadic: true) do
+      def self.accept(data) = {}
+
+      def self.to_renderable(original, default = nil) = {}
+
+      def self.renderable_default = {}
+
+      def self.Success(value) = nil
+    end
+
     it "only DSL, create_class!, from and from_collection" do
       assert {
         (Class.new { extend GuideRail }.public_methods - Class.new.public_methods).sort == [
@@ -258,61 +248,95 @@ describe GuideRail do
     end
 
     it "class methods of the same names as internals do not break from" do
-      assert { OverridingCreator.from(name: nil).value!.name == "" }
+      assert { overriding.from(name: nil).value!.name == "" }
     end
   end
 
   describe ".yield_block" do
-    it {
-      assert {
-        OptionalAndYieldAccepter.from({}).name.start_with? "decorated"
-      }
-    }
+    decorated = creator(Schemas::NAME_OPTIONAL, renderable: true) do
+      yield_block do
+        alias_method :name_orig, :name
+        define_method :name do
+          "decorated #{name_orig}"
+        end
+      end
+    end
+
+    it "the block is given to Data.define" do
+      assert { decorated.from({}).name == "decorated " }
+    end
   end
 
   describe ".computed" do
-    before {
-      @input = {
-        first_name: "Jane", last_name: "Doe",
-        active: true, role: "admin", status: "member"
-      }
-    }
+    user_view = creator(Schemas::USER) do
+      computed :display_name do |acc|
+        "#{acc.first_name} #{acc.last_name}"
+      end
+
+      computed :status do |acc|
+        (acc.active && acc.role == "admin") ? "owner" : acc.status
+      end
+
+      computed :observed do |acc|
+        {
+          status: acc.status,
+          writable: acc.respond_to?(:first_name=),
+          display_name: acc.respond_to?(:display_name)
+        }
+      end
+    end
+
+    input = {first_name: "Jane", last_name: "Doe", active: true, role: "admin", status: "member"}
 
     it "members are schema attrs + computed attrs without duplication" do
-      assert {
-        UserView.from(@input).members == [:first_name, :last_name, :active, :role, :status, :display_name, :observed]
-      }
+      assert { user_view.from(input).members == [:first_name, :last_name, :active, :role, :status, :display_name, :observed] }
     end
 
     it "derives a new attr" do
-      assert { UserView.from(@input).display_name == "Jane Doe" }
+      assert { user_view.from(input).display_name == "Jane Doe" }
     end
 
     it "overwrites a schema attr conditionally" do
-      assert { UserView.from(@input).status == "owner" }
-      assert { UserView.from(@input.merge(role: "user")).status == "member" }
+      assert { user_view.from(input).status == "owner" }
+      assert { user_view.from(input.merge(role: "user")).status == "member" }
     end
 
     describe "acc" do
-      before {
-        @observed = UserView.from(@input).observed
-      }
+      observed = user_view.from(input).observed
 
       it "holds validated input, not overwritten value" do
-        assert { @observed[:status] == "member" }
+        assert { observed[:status] == "member" }
       end
 
       it "has no writer" do
-        assert { @observed[:writable] == false }
+        assert { observed[:writable] == false }
       end
 
       it "does not contain other computed results" do
-        assert { @observed[:display_name] == false }
+        assert { observed[:display_name] == false }
       end
     end
 
     it "computed value is frozen" do
-      assert { UserView.from(@input).display_name.frozen? }
+      assert { user_view.from(input).display_name.frozen? }
+    end
+
+    describe "sharing a class method" do
+      shared = creator(Schemas::USER) do
+        def self.display_name_of(acc) = "#{acc.first_name} #{acc.last_name}"
+
+        computed :display_name do |acc|
+          display_name_of(acc)
+        end
+
+        computed :message do |acc|
+          "Hello, #{display_name_of(acc)}"
+        end
+      end
+
+      it "block can call class methods of the extending class" do
+        assert { shared.from(input).then { |d| [d.display_name, d.message] } == ["Jane Doe", "Hello, Jane Doe"] }
+      end
     end
 
     it "requires a block" do
@@ -320,57 +344,87 @@ describe GuideRail do
     end
 
     it "schema failure skips computed" do
-      assert { UserView.from({}).is_a?(Dry::Schema::Result) }
+      assert { user_view.from({}).is_a?(Dry::Schema::Result) }
     end
 
     describe "with monadic" do
+      monadic = creator(Schemas::USER, monadic: true) do
+        computed :display_name do |acc|
+          "#{acc.first_name} #{acc.last_name}"
+        end
+      end
+
       it "Success carries computed attr" do
-        assert { UserMonadicView.from(@input).value!.display_name == "Jane Doe" }
+        assert { monadic.from(input).value!.display_name == "Jane Doe" }
       end
 
       it "Failure on schema failure" do
-        assert { UserMonadicView.from({}).failure? }
+        assert { monadic.from({}).failure? }
       end
     end
 
     describe "with Params" do
+      raw_age = creator(Schemas::AGE) do
+        computed :raw_age do |acc|
+          acc.age
+        end
+      end
+
       it "acc receives coerced values" do
-        assert { ComputedParamsCreator.from(age: "20").raw_age == 20 }
+        assert { raw_age.from(age: "20").raw_age == 20 }
       end
 
       it "acc receives values from String keys" do
-        assert { ComputedParamsCreator.from("age" => 20).raw_age == 20 }
+        assert { raw_age.from("age" => 20).raw_age == 20 }
       end
     end
 
     describe "with renderable" do
-      before {
-        @renderable = ComputedRenderableCreator.from(name: nil)
-      }
+      raw_name = creator(Schemas::NAME_NULLABLE, renderable: true) do
+        computed :raw_name do |acc|
+          acc.name
+        end
+
+        computed :raw_name_nil do |acc|
+          acc.name.nil?
+        end
+
+        computed :nickname do |acc|
+          nil
+        end
+      end
 
       it "acc receives validated input as is, not renderable values" do
-        assert { @renderable.raw_name_nil == true }
+        assert { raw_name.from(name: nil).raw_name_nil == true }
       end
 
       it "renderable applies to computed attrs in output" do
-        assert { @renderable.raw_name == "" && @renderable.nickname == "" }
+        data = raw_name.from(name: nil)
+
+        assert { data.raw_name == "" && data.nickname == "" }
       end
 
       it "renderable applies to schema attrs in output" do
-        assert { @renderable.name == "" }
+        assert { raw_name.from(name: nil).name == "" }
       end
 
       describe "overwriting a nested schema attr" do
-        before {
-          @nested = ComputedNestedRenderableCreator.from(addr: nil, location: nil)
-        }
+        nested = creator(Schemas::NESTED_NULLABLE, renderable: true) do
+          computed :location do |acc|
+            acc.location&.merge(label: acc.addr)
+          end
+
+          computed :label do |acc|
+            nil
+          end
+        end
 
         it "nil gets the default of the schema shape" do
-          assert { @nested.location == {lat: "", lon: ""} }
+          assert { nested.from(addr: nil, location: nil).location == {lat: "", lon: ""} }
         end
 
         it "new computed attr gets zero length string" do
-          assert { @nested.label == "" }
+          assert { nested.from(addr: nil, location: nil).label == "" }
         end
       end
     end
